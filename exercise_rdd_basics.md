@@ -55,11 +55,11 @@ numbers = sc.parallelize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 # Task A: Square each number
 # Expected: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
-squared = # YOUR CODE
+squared = numbers.map(lambda x : x*x) # YOUR CODE
 
 # Task B: Convert to strings with prefix
 # Expected: ["num_1", "num_2", "num_3", ...]
-prefixed = # YOUR CODE
+prefixed = numbers.map(lambda x : f"num_{x}") # YOUR CODE
 ```
 
 ### Task 3: Apply filter() Transformation
@@ -67,15 +67,16 @@ prefixed = # YOUR CODE
 ```python
 # Task A: Keep only even numbers
 # Expected: [2, 4, 6, 8, 10]
-evens = # YOUR CODE
+evens = numbers.filter(lambda x: x % 2 == 0)# YOUR CODE
+
 
 # Task B: Keep numbers greater than 5
 # Expected: [6, 7, 8, 9, 10]
-greater_than_5 = # YOUR CODE
+greater_than_5 = numbers.filter(lambda x: x > 5) # YOUR CODE
 
 # Task C: Combine - even AND greater than 5
 # Expected: [6, 8, 10]
-combined = # YOUR CODE
+combined = evens.filter(lambda x: x > 5)# YOUR CODE
 ```
 
 ### Task 4: Apply flatMap() Transformation
