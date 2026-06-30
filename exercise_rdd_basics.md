@@ -32,7 +32,7 @@ print(f"Partitions: {numbers.getNumPartitions()}")
 
 # 2. Create RDD with explicit partitions
 # YOUR CODE: Create the same list with exactly 4 partitions
-numbers = sc.parallelize([1, 2, 3, 4])
+numbers = sc.parallelize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10],4)
 print(f"Numbers: {numbers.collect()}")
 print(f"Partitions: {numbers.getNumPartitions()}")
 
@@ -48,18 +48,21 @@ sc.stop()
 ### Task 2: Apply map() Transformation
 
 Add these tasks to your script:
-numbers = sc.parallelize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
 
 ```python
-# Given: numbers RDD [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
+# Given: numbers RDD [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+numbers = sc.parallelize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 # Task A: Square each number
 # Expected: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
 squared = numbers.map(lambda x : x*x) # YOUR CODE
+print(squared.collect())
 
 # Task B: Convert to strings with prefix
 # Expected: ["num_1", "num_2", "num_3", ...]
 prefixed = numbers.map(lambda x : f"num_{x}") # YOUR CODE
+print(prefixed.collect())
 ```
 
 ### Task 3: Apply filter() Transformation
@@ -91,11 +94,14 @@ sentences = sc.parallelize([
 
 # Task A: Split into words (use flatMap)
 # Expected: ["Hello", "World", "Apache", "Spark", ...]
-words = # YOUR CODE
+words = sentences.flatMap(lambda x : x.split()) # YOUR CODE
+print(sentences.collect())
 
 # Task B: Create pairs of (word, length)
 # Expected: [("Hello", 5), ("World", 5), ...]
-word_lengths = # YOUR CODE
+word_lengths = words.flatMap(lambda x : (x,len(x)))# YOUR CODE
+
+print(word_lengths.collect())
 ```
 
 ### Task 5: Chain Transformations
@@ -117,7 +123,8 @@ logs = sc.parallelize([
 # 2. Split each line into words
 # 3. Convert each word to uppercase
 # Expected: ["ERROR:", "CONNECTION", "FAILED", "ERROR:", "TIMEOUT", "OCCURRED"]
-error_words = # YOUR PIPELINE
+error_words = logs.filter(lambda x : x.split()[0] == "ERROR:").flatMap(lambda x: x.split()).map(lambda x: x.upper()) # YOUR PIPELINE
+print(error_words.collect())
 ```
 
 ---
