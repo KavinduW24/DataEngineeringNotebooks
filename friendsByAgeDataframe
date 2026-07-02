@@ -1,0 +1,11 @@
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("FriendsByAge").getOrCreate()
+
+people = spark.read.option("header",True).option("inferschema",True).csv("./fakefriends-header.csv")
+
+#people.select("name","age").show()
+
+people.groupBy("age").agg({"friends":"avg"}).show()
+
+spark.stop()
