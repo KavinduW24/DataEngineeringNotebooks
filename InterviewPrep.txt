@@ -1,0 +1,736 @@
+from pyspark.sql import SparkSession, functions as f 
+
+
+spark = SparkSession.builder.appName("DataCleaner").getOrCreate()
+
+data = [
+    (1, "Alice", 25, "NY"),
+    (2, "Bob", None, "LA"),
+    (2, "Bob", None, "LA"),
+    (3, None, 40, "NY")
+]
+
+columns = ["id", "name", "age", "city"]
+
+df = spark.createDataFrame(data, schema=columns)
+
+noDupes = df.distinct()
+
+averageAge = noDupes.agg(f.avg(noDupes.age)).first()[0]
+
+
+
+filledAges = noDupes.fillna(averageAge)
+
+
+filledNames = filledAges.fillna("Unknown")
+
+final = filledNames.filter(f.col("age") >30)
+
+final.show()
+
+spark.stop()
+
+1. Data Cleaning
+
+Given a DataFrame like:
+
+id	name	age	city
+1	Alice	25	NY
+2	Bob	null	LA
+2	Bob	null	LA
+3	null	40	NY
+
+Ask the candidate to:
+
+Remove duplicates
+Fill missing ages with the average age
+Replace missing names with "Unknown"
+Filter people over 30
+
+Skills tested:
+
+dropDuplicates()
+fillna()
+aggregations
+filtering
+
+from pyspark.sql import SparkSession, functions as f 
+
+
+spark = SparkSession.builder.appName("GroupByAndAgg").getOrCreate()
+
+data = [
+    ("A", "Phone", 500),
+    ("A", "Laptop", 1000),
+    ("B", "Phone", 700),
+]
+
+columns = ["customer", "product", "amount"]
+
+df = spark.createDataFrame(data, schema=columns)
+
+df.groupBy("customer").agg(f.sum(df.amount).alias("Total Spent")).orderBy("Total Spent",ascending = False).show()
+
+df.agg(f.avg(df.amount)).show()
+
+spark.stop()
+2. Group By and Aggregation
+
+Sales data:
+
+customer	product	amount
+A	Phone	500
+A	Laptop	1000
+B	Phone	700
+
+Questions:
+
+Total spend per customer
+Average purchase amount
+Highest spending customer
+
+Skills:
+
+groupBy
+agg
+sum
+avg
+orderBy
+from pyspark.sql import SparkSession, functions as f
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder.appName("BestOfDepart").getOrCreate()
+
+data = [
+    ("IT", "John", 100),
+    ("IT", "Mary", 200),
+    ("IT", "Alex", 150)
+]
+
+columns = ["department", "employee", "salary"]
+
+df = spark.createDataFrame(data, columns)
+
+window_spec = Window.partitionBy("department").orderBy(f.col("salary").desc())
+
+result = (
+    df.withColumn("rank", f.rank().over(window_spec))
+      .filter(f.col("rank") == 1)
+      .drop("rank")
+)
+
+result.show()
+
+spark.stop()
+3. Top N per Group
+
+Example:
+
+department	employee	salary
+IT	John	100
+IT	Mary	200
+IT	Alex	150
+
+Return the highest-paid employee in each department.
+
+Expected solution:
+
+Use a Window function.
+
+Tests:
+
+Window.partitionBy
+row_number
+rank
+dense_rank
+
+from pyspark.sql import SparkSession, functions as f
+
+spark = SparkSession.builder.appName("BestOfDepart").getOrCreate()
+
+customers_data = [
+    (1, "Alice"),
+    (2, "Bob")
+]
+
+customers = spark.createDataFrame(
+    customers_data,
+    ["customer_id", "name"]
+)
+
+
+orders_data = [
+    (1, 100),
+    (1, 50),
+    (3, 25)
+]
+
+orders = spark.createDataFrame(
+    orders_data,
+    ["customer_id", "amount"]
+)
+
+customers.join(orders,"customer_id").show()
+leftJoin = customers.join(orders,"customer_id","left")
+leftJoin.show()
+
+leftJoin.filter(f.col("amount").isNull()).show()
+
+leftJoin.groupBy("customer_id").agg(f.sum("amount")).show()
+
+df = spark.createDataFrame(data, columns)
+
+spark.stop()
+4. Joins
+
+Customers
+
+id	name
+1	Alice
+2	Bob
+
+Orders
+
+customer_id	amount
+1	100
+1	50
+3	25
+
+Questions:
+
+Inner join
+Left join
+Customers with no orders
+Total spend per customer
+
+Tests:
+
+joins
+null handling
+aggregations
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.getOrCreate()
+
+data = [
+    ("a@test.com",),
+    ("b@test.com",),
+    ("a@test.com",),
+    ("c@test.com",)
+]
+
+df = spark.createDataFrame(data, ["email"])
+
+duplicates = (
+    df.groupBy("email")
+      .count()
+      .filter("count > 1")
+)
+
+duplicates.show()
+
+occurrences = df.groupBy("email").count()
+
+occurrences.show()
+
+unique_df = df.distinct()
+5. Find Duplicate Records
+
+Dataset:
+
+email
+-----
+a@test.com
+b@test.com
+a@test.com
+c@test.com
+
+Tasks:
+
+Find duplicate emails
+Count occurrences
+Keep only unique rows
+from pyspark.sql import SparkSession, functions as f
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder.appName("window func challenge").getOrCreate()
+
+data = [
+    ("A", "2024-01-01", 10),
+    ("A", "2024-01-02", 20),
+    ("A", "2024-01-03", 15),
+]
+
+df = spark.createDataFrame(data, ["user", "date", "amount"])
+
+df = df.withColumn("date", f.to_date("date"))
+
+window_spec = Window.partitionBy("user").orderBy("date")
+
+running_window = window_spec.rowsBetween(
+    Window.unboundedPreceding,
+    Window.currentRow
+)
+
+df = df.withColumn(
+    "running_total",
+    f.sum("amount").over(running_window)
+)
+
+df = df.withColumn(
+    "previous_amount",
+    f.lag("amount").over(window_spec)
+)
+
+df = df.withColumn(
+    "difference",
+    f.col("amount") - f.col("previous_amount")
+)
+
+rolling_window = window_spec.rowsBetween(-6, 0)
+
+df = df.withColumn(
+    "rolling_avg_7_days",
+    f.avg("amount").over(rolling_window)
+)
+
+df.show()
+
+spark.stop()
+6. Window Function Challenge
+
+Transactions
+
+user	date	amount
+A	Jan1	10
+A	Jan2	20
+A	Jan3	15
+
+Questions:
+
+Running total
+Previous transaction
+Difference from previous transaction
+Rolling 7-day average
+
+Tests:
+
+lag
+lead
+cumulative sums
+window frames
+
+from pyspark.sql import SparkSession, functions as f
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder.appName("sessions").getOrCreate()
+
+data = [
+    ("Alice", "2024-01-01 09:00:00"),
+    ("Alice", "2024-01-01 09:10:00"),
+    ("Alice", "2024-01-01 10:00:00"),
+    ("Alice", "2024-01-01 10:20:00"),
+    ("Bob",   "2024-01-01 09:00:00"),
+    ("Bob",   "2024-01-01 09:40:00"),
+    ("Bob",   "2024-01-01 09:50:00")
+]
+
+df = spark.createDataFrame(data, ["user", "timestamp"])
+
+df = df.withColumn("timestamp", f.to_timestamp("timestamp"))
+
+window_spec = Window.partitionBy("user").orderBy("timestamp")
+
+df = df.withColumn(
+    "prev_timestamp",
+    f.lag("timestamp").over(window_spec)
+)
+
+df = df.withColumn(
+    "gap_minutes",
+    (f.unix_timestamp("timestamp") - f.unix_timestamp("prev_timestamp")) / 60
+)
+
+df = df.withColumn(
+    "new_session",
+    f.when(
+        (df.prev_timestamp.isNull()) | (df.gap_minutes > 30),
+        1
+    ).otherwise(0)
+)
+
+df = df.withColumn(
+    "session_id",
+    f.sum("new_session").over(
+        window_spec.rowsBetween(Window.unboundedPreceding, Window.currentRow)
+    )
+)
+
+df.select(
+    "user",
+    "timestamp",
+    "gap_minutes",
+    "session_id"
+).show(truncate=False)
+
+
+spark.stop()
+7. Sessionization
+
+Given clickstream events:
+
+user
+timestamp
+
+Create sessions where a new session starts if the gap exceeds 30 minutes.
+
+Tests:
+
+window functions
+timestamp arithmetic
+cumulative IDs
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("Pivot").getOrCreate()
+
+data = [
+    ("Jan", "A", 10),
+    ("Jan", "B", 15),
+    ("Feb", "A", 12)
+]
+
+df = spark.createDataFrame(
+    data,
+    ["Month", "Product", "Sales"]
+)
+
+df.show()
+
+pivot_df = (
+    df.groupBy("Month")
+      .pivot("Product")
+      .agg(sum("Sales"))
+)
+
+pivot_df.show()
+
+spark.stop()
+8. Pivot Challenge
+
+Input
+
+Month	Product	Sales
+Jan	A	10
+Jan	B	15
+Feb	A	12
+
+Output
+
+Month	A	B
+Jan	10	15
+Feb	12	null
+
+Tests:
+
+pivot
+
+from pyspark.sql import SparkSession, functions as f
+
+spark = SparkSession.builder.getOrCreate()
+
+data = [
+    ("Alice", ["Math", "Science"]),
+    ("Bob", ["History"])
+]
+
+df = spark.createDataFrame(data, ["name", "subjects"])
+
+df.show(truncate=False)
+
+result = (
+    df.select(
+        "name",
+        f.explode("subjects").alias("subject")
+    )
+)
+
+result.show()
+
+spark.stop()
+9. Explode Nested Data
+
+Input:
+
+[
+  ("Alice", ["Math", "Science"]),
+  ("Bob", ["History"])
+]
+
+Output:
+
+name	subject
+Alice	Math
+Alice	Science
+Bob	History
+
+Tests:
+
+arrays
+explode
+
+from pyspark.sql import SparkSession
+
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    IntegerType,
+    StringType
+)
+
+spark = SparkSession.builder.getOrCreate()
+
+data = [
+    ('{"customer":{"id":1,"city":"NY"}}',)
+]
+
+df = spark.createDataFrame(data, ["json_data"])
+
+df.show(truncate=False)
+
+
+schema = StructType([
+    StructField(
+        "customer",
+        StructType([
+            StructField("id", IntegerType(), True),
+            StructField("city", StringType(), True)
+        ]),
+        True
+    )
+])
+
+from pyspark.sql.functions import from_json
+
+parsed_df = df.withColumn(
+    "parsed",
+    from_json("json_data", schema)
+)
+
+parsed_df.show(truncate=False)
+
+result = parsed_df.select(
+    "parsed.customer.id",
+    "parsed.customer.city"
+)
+
+result.show()
+
+flattened_df = parsed_df.select("parsed.customer.*")
+
+flattened_df.show()
+
+
+spark.stop()
+10. JSON Parsing
+
+Input:
+
+{
+  "customer":{
+      "id":1,
+      "city":"NY"
+  }
+}
+
+Tasks:
+
+Parse JSON
+Flatten nested columns
+Select nested fields
+
+Tests:
+
+from_json
+schemas
+structs
+
+from pyspark.sql import functions as f
+
+salted = df.withColumn(
+    "salt",
+    f.floor(f.rand() * 10)
+).withColumn(
+    "customer_salted",
+    f.concat_ws("_", "customer_id", "salt")
+)
+
+11. Skew Handling
+
+Question:
+
+One customer has 50 million transactions while others have only a few hundred.
+
+Ask:
+
+Why is the job slow?
+How would you fix it?
+
+Expected discussion:
+
+salting keys
+broadcast joins
+repartitioning
+adaptive query execution
+skew join optimization
+
+from pyspark.sql.functions import broadcast
+
+df.join(
+    broadcast(df2),
+    "id"
+)
+13. Optimize a Slow Job
+
+Given code like:
+
+df.join(df2, "id").groupBy("city").count()
+
+Ask:
+
+How would you optimize this?
+
+Possible discussion:
+
+broadcast joins
+caching
+partition pruning
+predicate pushdown
+avoiding unnecessary shuffles
+choosing appropriate partition counts
+from pyspark.sql import SparkSession, functions as f
+
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    IntegerType,
+    DoubleType
+)
+
+spark = SparkSession.builder.getOrCreate()
+
+schema = StructType([
+    StructField("order_id", IntegerType()),
+    StructField("customer_id", IntegerType()),
+    StructField("amount", DoubleType())
+])
+
+df = spark.read.schema(schema).csv(
+    "/data/orders/*.csv",
+    header=True
+)
+df = df.withColumn(
+    "source_file",
+    f.input_file_name()
+)
+
+df = spark.read \
+    .option("mode", "PERMISSIVE") \
+    .option("columnNameOfCorruptRecord", "_corrupt_record") \
+    .csv("/data/orders/*.csv", header=True)
+    
+spark.stop()
+
+14. Read Multiple Files
+
+Tasks:
+
+Read all CSVs from a directory
+Infer schema (or define it explicitly)
+Add filename as a column
+Handle malformed records
+
+Tests:
+
+file ingestion
+schema management
+metadata columns
+
+from pyspark.sql import SparkSession, functions as f
+
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder.getOrCreate()
+
+
+orders = spark.read.csv("")
+
+customers = spark.read.csv("")
+
+orders = orders.na.drop(subset=["customer_id"])
+
+orders = orders.fillna({"amount": 0})
+
+orders = orders.dropDuplicates()
+
+customers = customers.dropDuplicates()
+
+joined = orders.join(
+    customers,
+    "customer_id",
+    "left"
+)
+
+sales_city = joined.groupBy("city").agg(
+    f.sum("amount").alias("total_sales")
+)
+
+customer_spend = joined.groupBy("customer_id").agg(
+    sum("amount").alias("spending")
+)
+
+window = Window.orderBy(customer_spend["spending"].desc())
+
+top3 = (
+    customer_spend
+    .withColumn("rank", f.row_number().over(window))
+    .filter("rank <= 3")
+)
+
+
+spark.stop()
+15. End-to-End ETL Challenge (Excellent 60-minute Interview)
+
+Input:
+
+Orders:
+
+order_id
+customer_id
+date
+amount
+
+Customers:
+
+customer_id
+city
+segment
+
+Requirements:
+
+Clean missing values
+Remove duplicates
+Join datasets
+Calculate:
+total sales by city
+average order value by segment
+top 3 customers by spending
+Write the result partitioned by city
+
+Tests nearly every core PySpark skill:
+
+reading data
+joins
+aggregations
+window functions
+partitioned output
